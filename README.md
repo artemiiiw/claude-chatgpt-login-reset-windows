@@ -5,8 +5,8 @@ Reset login/auth session artifacts for:
 - ChatGPT/OpenAI
 
 ## Scripts
-- `scripts/windows/cloud-chatgpt-login-reset-windows.ps1`
-- `scripts/macos/cloud-chatgpt-login-reset-macos.sh`
+- `scripts/windows/claude-chatgpt-login-reset-windows.ps1`
+- `scripts/macos/claude-chatgpt-login-reset-macos.sh`
 
 ## Notes
 - Choose Windows or macOS script based on your OS.
