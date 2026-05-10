@@ -1,24 +1,42 @@
-# Claude + ChatGPT Login Reset - Clean Start
+# Claude Code + ChatGPT Login Reset (Windows PowerShell)
 
-When Claude Code or ChatGPT/OpenAI login is bugged, use this script to reset
-local credentials/session artifacts and start clean.
+Fix `Claude Code login bug`, `ChatGPT login issue`, and OpenAI/Anthropic
+authorization loops on Windows by resetting local credentials, cookies, and
+session artifacts.
 
-The script supports product scope:
-- `All` (Claude + ChatGPT/OpenAI)
-- `Claude` only
-- `ChatGPT` only
+Useful when it is hard to find the exact broken cookie/token manually.
 
-It also supports UI localization:
-- `-Language ru`
-- `-Language en`
-- `-Language Auto` (default)
+## What It Fixes
+- Claude Code sign-in loops
+- ChatGPT/OpenAI auth/login errors
+- Stale browser session/cookie state for Claude/ChatGPT domains
+- Local credential artifacts that keep broken login state
 
-## Files
-- `claude-login-reset-clean-start.ps1` - PowerShell reset script (RU/EN menu)
-- `claude-login-reset-clean-start.zip` - zipped script for easy download
+## Quick Start
+1. Download script (.ps1):
+   https://github.com/artemiiiw/claude-chatgpt-login-reset-windows/releases/download/v1.1.0/claude-login-reset-clean-start.ps1
+2. Run (PowerShell):
+```powershell
+powershell -ExecutionPolicy Bypass -File .\claude-login-reset-clean-start.ps1 -Mode Safe -DryRun -Language en
+```
 
-## Direct download (.ps1)
-https://github.com/artemiiiw/claude-login-reset-clean-start/releases/download/v1.0.0/claude-login-reset-clean-start.ps1
+## Download
+- Direct `.ps1`:
+  https://github.com/artemiiiw/claude-chatgpt-login-reset-windows/releases/download/v1.1.0/claude-login-reset-clean-start.ps1
+- Direct `.zip`:
+  https://raw.githubusercontent.com/artemiiiw/claude-chatgpt-login-reset-windows/master/claude-login-reset-clean-start.zip
 
-## Direct download (.zip)
-https://raw.githubusercontent.com/artemiiiw/claude-login-reset-clean-start/master/claude-login-reset-clean-start.zip
+## Run Examples
+```powershell
+# English UI
+powershell -ExecutionPolicy Bypass -File .\claude-login-reset-clean-start.ps1 -Language en
+
+# Russian UI
+powershell -ExecutionPolicy Bypass -File .\claude-login-reset-clean-start.ps1 -Language ru
+
+# Safe real reset for both Claude + ChatGPT/OpenAI
+powershell -ExecutionPolicy Bypass -File .\claude-login-reset-clean-start.ps1 -Mode Safe -Product All -ConfirmReset
+
+# Only ChatGPT/OpenAI
+powershell -ExecutionPolicy Bypass -File .\claude-login-reset-clean-start.ps1 -Mode Safe -Product ChatGPT -ConfirmReset
+```
