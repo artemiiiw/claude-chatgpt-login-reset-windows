@@ -75,46 +75,54 @@ param(
     [switch]$StatusDeleteFound,
 
     # Run privacy hardening checks/fixes (env + git identity + git remotes audit).
-    [switch]$PrivacyHardening
+    [switch]$PrivacyHardening,
+
+    # UI language for menu and key messages:
+    # Auto = detect from system UI culture; ru/en = force language.
+    [ValidateSet('Auto','ru','en')]
+    [string]$Language = 'Auto'
 )
 
 # Reduce noisy non-critical errors; script tracks failures in summary counters.
 $ErrorActionPreference = 'SilentlyContinue'
 $script:InteractiveMenu = $false
 $script:LogPath = Join-Path $env:TEMP ("claude-reset-log-{0}.txt" -f (Get-Date -Format 'yyyyMMdd-HHmmss'))
+$script:UiLang = if ($Language -eq 'Auto') {
+    if ((Get-Culture).Name -like 'ru*') { 'ru' } else { 'en' }
+} else {
+    $Language
+}
+
+function L {
+    param(
+        [string]$Ru,
+        [string]$En
+    )
+    if ($script:UiLang -eq 'ru') { return $Ru }
+    return $En
+}
 
 # Interactive menu when script is launched without parameters.
 # This makes it easy to choose execution mode directly from terminal.
 if ($PSBoundParameters.Count -eq 0) {
     $script:InteractiveMenu = $true
     Write-Host ''
-    Write-Host 'Выберите режим запуска:' -ForegroundColor Cyan
-    Write-Host '  1) Проверка статуса входов (диагностика + опция удалить найденное) [НЕ РАЗЛОГИНИТ]' -ForegroundColor Green
-    Write-Host '     Что делает: показывает, где найдены артефакты входа, и предлагает удалить только найденное.'
-    Write-Host '  2) SAFE dry-run (предпросмотр) [НЕ РАЗЛОГИНИТ]' -ForegroundColor Green
-    Write-Host '     Что делает: показывает, что удалилось бы в SAFE, без изменений на диске.'
-    Write-Host '  3) SOFT dry-run (предпросмотр) [НЕ РАЗЛОГИНИТ]' -ForegroundColor Green
-    Write-Host '     Что делает: показывает план SOFT без фактического удаления.'
-    Write-Host '  4) HARD dry-run (предпросмотр) [НЕ РАЗЛОГИНИТ]' -ForegroundColor Green
-    Write-Host '     Что делает: показывает, какие профили браузеров были бы удалены.'
-    Write-Host '  5) SAFE (реальный запуск) — мягкая очистка. [МОЖЕТ РАЗЛОГИНИТЬ ТОЧЕЧНО]' -ForegroundColor Green
-    Write-Host '     Что делает: чистит локальные данные + точечные веб-артефакты по выбранному продукту.'
-    Write-Host '  6) SOFT (реальный запуск) — как SAFE, плюс Credential Manager. [МОЖЕТ РАЗЛОГИНИТЬ ЧАСТИЧНО]' -ForegroundColor Yellow
-    Write-Host '     Что делает: SAFE + удаляет системные credential-записи по scope (Claude/OpenAI).'
-    Write-Host '  7) HARD (реальный запуск) — полный сброс профилей браузеров. [РАЗЛОГИНИТ ВЕЗДЕ И ВСЁ]' -ForegroundColor Red
-    Write-Host '     Что делает: удаляет папки профилей браузеров целиком; разлогинит почти везде.'
-    Write-Host '  8) Сброс сети dry-run (предпросмотр) [НЕ РАЗЛОГИНИТ]' -ForegroundColor Green
-    Write-Host '     Что делает: только показывает сетевые команды, ничего не меняет.'
-    Write-Host '  9) Сброс сети (реальный запуск) — только DNS/WinHTTP. [НЕ РАЗЛОГИНИТ]' -ForegroundColor Green
-    Write-Host '     Что делает: ipconfig /flushdns + netsh winhttp reset proxy; без очистки логинов.'
-    Write-Host ' 10) Privacy hardening dry-run (предпросмотр) [НЕ РАЗЛОГИНИТ]' -ForegroundColor Green
-    Write-Host '     Что делает: показывает privacy-шаги без применения.'
-    Write-Host ' 11) Privacy hardening (реальный запуск) [НЕ РАЗЛОГИНИТ]' -ForegroundColor Green
-    Write-Host '     Что делает: чистит чувствительные env в текущей сессии + тех. git user/email + audit remotes.'
-    Write-Host (" 12) Смена имени компьютера (hostname) [НЕ РАЗЛОГИНИТ] (текущее: {0})" -f $env:COMPUTERNAME) -ForegroundColor Yellow
-    Write-Host '     Что делает: меняет имя ПК; вступает в силу после перезагрузки.'
-    Write-Host ' 13) Выход'
-    $choice = Read-Host 'Введите 1-13'
+    Write-Host (L 'Выберите режим запуска:' 'Choose run mode:') -ForegroundColor Cyan
+    Write-Host (L '  1) Проверка статуса входов (диагностика + опция удалить найденное) [НЕ РАЗЛОГИНИТ]' '  1) Login status check (diagnostics + optional delete found) [WILL NOT LOG OUT]') -ForegroundColor Green
+    Write-Host (L '     Что делает: показывает, где найдены артефакты входа, и предлагает удалить только найденное.' '     Shows where login artifacts were found and can delete only found items.')
+    Write-Host (L '  2) SAFE dry-run (предпросмотр) [НЕ РАЗЛОГИНИТ]' '  2) SAFE dry-run (preview) [WILL NOT LOG OUT]') -ForegroundColor Green
+    Write-Host (L '  3) SOFT dry-run (предпросмотр) [НЕ РАЗЛОГИНИТ]' '  3) SOFT dry-run (preview) [WILL NOT LOG OUT]') -ForegroundColor Green
+    Write-Host (L '  4) HARD dry-run (предпросмотр) [НЕ РАЗЛОГИНИТ]' '  4) HARD dry-run (preview) [WILL NOT LOG OUT]') -ForegroundColor Green
+    Write-Host (L '  5) SAFE (реальный запуск) — мягкая очистка. [МОЖЕТ РАЗЛОГИНИТЬ ТОЧЕЧНО]' '  5) SAFE (real run) - gentle cleanup. [MAY LOG OUT SOME SITES]') -ForegroundColor Green
+    Write-Host (L '  6) SOFT (реальный запуск) — как SAFE, плюс Credential Manager. [МОЖЕТ РАЗЛОГИНИТЬ ЧАСТИЧНО]' '  6) SOFT (real run) - SAFE + Credential Manager. [MAY LOG OUT PARTIALLY]') -ForegroundColor Yellow
+    Write-Host (L '  7) HARD (реальный запуск) — полный сброс профилей браузеров. [РАЗЛОГИНИТ ВЕЗДЕ И ВСЁ]' '  7) HARD (real run) - full browser profile reset. [LOGS OUT EVERYWHERE]') -ForegroundColor Red
+    Write-Host (L '  8) Сброс сети dry-run (предпросмотр) [НЕ РАЗЛОГИНИТ]' '  8) Network reset dry-run (preview) [WILL NOT LOG OUT]') -ForegroundColor Green
+    Write-Host (L '  9) Сброс сети (реальный запуск) — только DNS/WinHTTP. [НЕ РАЗЛОГИНИТ]' '  9) Network reset (real run) - DNS/WinHTTP only. [WILL NOT LOG OUT]') -ForegroundColor Green
+    Write-Host (L ' 10) Privacy hardening dry-run (предпросмотр) [НЕ РАЗЛОГИНИТ]' ' 10) Privacy hardening dry-run (preview) [WILL NOT LOG OUT]') -ForegroundColor Green
+    Write-Host (L ' 11) Privacy hardening (реальный запуск) [НЕ РАЗЛОГИНИТ]' ' 11) Privacy hardening (real run) [WILL NOT LOG OUT]') -ForegroundColor Green
+    Write-Host ((L " 12) Смена имени компьютера (hostname) [НЕ РАЗЛОГИНИТ] (текущее: {0})" " 12) Change computer hostname [WILL NOT LOG OUT] (current: {0})") -f $env:COMPUTERNAME) -ForegroundColor Yellow
+    Write-Host (L ' 13) Выход' ' 13) Exit')
+    $choice = Read-Host (L 'Введите 1-13' 'Enter 1-13')
 
     switch ($choice) {
         '1' { $Mode = 'Safe'; $DryRun = $true; $StatusOnly = $true; $SkipCredentialManager = $true }
@@ -131,23 +139,23 @@ if ($PSBoundParameters.Count -eq 0) {
         '12' {
             $Mode = 'Safe'; $ConfirmReset = $true; $SkipCredentialManager = $true
             $EnableHostnameChange = $true
-            Write-Host ("Текущее имя компьютера: {0}" -f $env:COMPUTERNAME) -ForegroundColor Cyan
-            $hn = Read-Host 'Введите новое имя компьютера (1-15: A-Z,0-9,-), Enter=авто'
+            Write-Host ((L "Текущее имя компьютера: {0}" "Current computer name: {0}") -f $env:COMPUTERNAME) -ForegroundColor Cyan
+            $hn = Read-Host (L 'Введите новое имя компьютера (1-15: A-Z,0-9,-), Enter=авто' 'Enter new computer name (1-15: A-Z,0-9,-), Enter=auto')
             if (-not [string]::IsNullOrWhiteSpace($hn)) { $NewHostname = $hn }
         }
         default {
-            Write-Host 'Выход без изменений.' -ForegroundColor Yellow
+            Write-Host (L 'Выход без изменений.' 'Exit without changes.') -ForegroundColor Yellow
             exit 0
         }
     }
 
     if ((-not $NetworkResetOnly) -and (-not $StatusOnly)) {
         Write-Host ''
-        Write-Host 'Выберите продукт для очистки:' -ForegroundColor Cyan
-        Write-Host '  1) Все (Claude + ChatGPT/OpenAI)'
-        Write-Host '  2) Только Claude'
-        Write-Host '  3) Только ChatGPT/OpenAI'
-        $scopeChoice = Read-Host 'Введите 1-3'
+        Write-Host (L 'Выберите продукт для очистки:' 'Choose product scope:') -ForegroundColor Cyan
+        Write-Host (L '  1) Все (Claude + ChatGPT/OpenAI)' '  1) All (Claude + ChatGPT/OpenAI)')
+        Write-Host (L '  2) Только Claude' '  2) Claude only')
+        Write-Host (L '  3) Только ChatGPT/OpenAI' '  3) ChatGPT/OpenAI only')
+        $scopeChoice = Read-Host (L 'Введите 1-3' 'Enter 1-3')
         switch ($scopeChoice) {
             '2' { $Product = 'Claude' }
             '3' { $Product = 'ChatGPT' }
@@ -155,17 +163,17 @@ if ($PSBoundParameters.Count -eq 0) {
         }
 
         if ($Mode -eq 'Soft' -or $Mode -eq 'Hard') {
-            $askCred = Read-Host 'Очистить Credential Manager? (Y/n)'
+            $askCred = Read-Host (L 'Очистить Credential Manager? (Y/n)' 'Clean Credential Manager entries? (Y/n)')
             if ($askCred -match '^(?i)n|no|н|нет$') { $SkipCredentialManager = $true }
         }
     }
     elseif ($StatusOnly) {
         Write-Host ''
-        Write-Host 'Выберите продукт для проверки статуса:' -ForegroundColor Cyan
-        Write-Host '  1) Все (Claude + ChatGPT/OpenAI)'
-        Write-Host '  2) Только Claude'
-        Write-Host '  3) Только ChatGPT/OpenAI'
-        $scopeChoice = Read-Host 'Введите 1-3'
+        Write-Host (L 'Выберите продукт для проверки статуса:' 'Choose product scope for status check:') -ForegroundColor Cyan
+        Write-Host (L '  1) Все (Claude + ChatGPT/OpenAI)' '  1) All (Claude + ChatGPT/OpenAI)')
+        Write-Host (L '  2) Только Claude' '  2) Claude only')
+        Write-Host (L '  3) Только ChatGPT/OpenAI' '  3) ChatGPT/OpenAI only')
+        $scopeChoice = Read-Host (L 'Введите 1-3' 'Enter 1-3')
         switch ($scopeChoice) {
             '2' { $Product = 'Claude' }
             '3' { $Product = 'ChatGPT' }
@@ -176,9 +184,9 @@ if ($PSBoundParameters.Count -eq 0) {
 
 # Guardrail: prevent accidental destructive run when running with explicit flags.
 if (-not $ConfirmReset -and -not $DryRun) {
-    Write-Host 'ОТКАЗ: укажите -ConfirmReset для реального запуска или -DryRun для предпросмотра.' -ForegroundColor Yellow
-    Write-Host 'Примеры:'
-    Write-Host '  Интерактивное меню: powershell -ExecutionPolicy Bypass -File .\scripts\reset-claude-and-browser-logins.ps1'
+    Write-Host (L 'ОТКАЗ: укажите -ConfirmReset для реального запуска или -DryRun для предпросмотра.' 'REFUSED: use -ConfirmReset for real run or -DryRun for preview.') -ForegroundColor Yellow
+    Write-Host (L 'Примеры:' 'Examples:')
+    Write-Host '  Interactive menu: powershell -ExecutionPolicy Bypass -File .\scripts\reset-claude-and-browser-logins.ps1'
     Write-Host '  Dry:  powershell -ExecutionPolicy Bypass -File .\scripts\reset-claude-and-browser-logins.ps1 -Mode Safe -DryRun'
     Write-Host '  Safe: powershell -ExecutionPolicy Bypass -File .\scripts\reset-claude-and-browser-logins.ps1 -Mode Safe -ConfirmReset'
     Write-Host '  Soft: powershell -ExecutionPolicy Bypass -File .\scripts\reset-claude-and-browser-logins.ps1 -Mode Soft -ConfirmReset'
