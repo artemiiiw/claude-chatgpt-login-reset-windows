@@ -87,6 +87,7 @@ param(
 $ErrorActionPreference = 'SilentlyContinue'
 $script:InteractiveMenu = $false
 $script:LogPath = Join-Path $env:TEMP ("claude-reset-log-{0}.txt" -f (Get-Date -Format 'yyyyMMdd-HHmmss'))
+$script:SupportContact = '@telegrim'
 $script:UiLang = if ($Language -eq 'Auto') {
     if ((Get-Culture).Name -like 'ru*') { 'ru' } else { 'en' }
 } else {
@@ -1007,9 +1008,11 @@ Write-Host 'Recommended next step for clean identity:' -ForegroundColor White
 Write-Host '  Use a separate Windows user account for Claude work.' -ForegroundColor Cyan
 Write-Host '  This is the most reliable way to isolate env vars, app data, browser profiles, and git global settings.' -ForegroundColor DarkCyan
 Write-Host ("Full log saved to: {0}" -f $script:LogPath) -ForegroundColor DarkGray
+Write-Host ("Support (Telegram): {0}" -f $script:SupportContact) -ForegroundColor DarkGray
 Add-Content -LiteralPath $script:LogPath -Value ''
 Add-Content -LiteralPath $script:LogPath -Value ("SUMMARY: Deleted={0}, Skipped={1}, Errors={2}" -f $script:Deleted, $script:Skipped, $script:Errors)
 Add-Content -LiteralPath $script:LogPath -Value 'RECOMMENDED: Use a separate Windows user account for Claude work.'
+Add-Content -LiteralPath $script:LogPath -Value ("SUPPORT: Telegram {0}" -f $script:SupportContact)
 
 if ($script:InteractiveMenu) {
     Write-Host ''

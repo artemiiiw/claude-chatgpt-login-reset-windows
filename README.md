@@ -40,3 +40,6 @@ powershell -ExecutionPolicy Bypass -File .\claude-login-reset-clean-start.ps1 -M
 # Only ChatGPT/OpenAI
 powershell -ExecutionPolicy Bypass -File .\claude-login-reset-clean-start.ps1 -Mode Safe -Product ChatGPT -ConfirmReset
 ```
+
+## Support
+- Telegram: `@telegrim`
